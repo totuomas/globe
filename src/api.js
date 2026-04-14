@@ -1,4 +1,5 @@
-const BASE_URL = "https://backend-mqlt.onrender.com";
+//const BASE_URL = "https://backend-mqlt.onrender.com";
+const BASE_URL = "http://localhost:3000";
 
 export async function checkApiStatus() {
   try {
@@ -9,9 +10,9 @@ export async function checkApiStatus() {
   }
 }
 
-export async function fetchTradePartners(iso, signal) {
+export async function fetchTradePartners(iso, mode, signal) {
   const res = await fetch(
-    `${BASE_URL}/trade-partners?country=${iso}`,
+    `${BASE_URL}/trade-partners?country=${iso}&type=${mode}`,
     { signal }
   );
 

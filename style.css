@@ -79,3 +79,28 @@ body {
     background: linear-gradient(to right, #fff, red);
     border-radius: 5px;
 }
+
+#mode-toggle {
+  position: absolute;      /* 👈 ADD THIS */
+  top: 70px;               /* adjust as you like */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;             /* 👈 ADD THIS */
+
+  display: flex;
+  gap: 8px;
+}
+
+#mode-toggle button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+#mode-toggle button.active {
+  background: #00cc66;
+  color: black;
+}

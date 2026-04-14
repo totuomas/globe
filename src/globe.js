@@ -67,7 +67,7 @@ export function initGlobe({
 
     .onPolygonHover(hoverD => {
       world.polygonAltitude(d =>
-        d === hoverD || d === state.lastClicked ? 0.03 : 0.01
+        d === hoverD || d === state.lastClicked ? 0.02 : 0.01
       );
     })
 
@@ -90,7 +90,7 @@ export function initGlobe({
       onReset(world);
     })
 
-    .polygonsTransitionDuration(600);
+    .polygonsTransitionDuration(200);
 
   // globe styling
   world.globeMaterial().color.set("#0b1e2d");

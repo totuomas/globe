@@ -12,6 +12,10 @@ const countryNameEl = document.getElementById("country-name");
 const partnerListEl = document.getElementById("partner-list");
 const globeContainer = document.getElementById("globe-container");
 
+// 👇 NEW toggle elements
+const exportsBtn = document.getElementById("exports-btn");
+const importsBtn = document.getElementById("imports-btn");
+
 // ===== STATUS BAR =====
 const { dot, text, btn } = createStatusBar(infoPanel);
 
@@ -31,6 +35,65 @@ async function checkApi() {
 btn.onclick = checkApi;
 checkApi();
 
+
+// ===== MODE TOGGLE =====
+function setMode(mode) {
+  state.tradeMode = mode;
+
+  // update button styles
+  exportsBtn.classList.toggle("active", mode === "exports");
+  importsBtn.classList.toggle("active", mode === "imports");
+
+  // update header text
+  document.querySelector("#header p").textContent =
+    mode === "exports"
+      ? "Click a country to see its export partners"
+      : "Click a country to see its import partners";
+
+  // 🔁 if country already selected → re-fetch
+  if (state.lastClicked) {
+    const polygon = state.lastClicked;
+    const iso = polygon.properties.ISO_A3;
+
+    showLoading(partnerListEl);
+
+    if (state.currentRequest) {
+      state.currentRequest.abort();
+    }
+
+    const controller = new AbortController();
+    state.currentRequest = controller;
+
+    fetchTradePartners(iso, state.tradeMode, controller.signal)
+      .then(data => {
+
+        state.tradePartners = {};
+
+        data.forEach(p => {
+          if (p.value > 0.05) {
+            state.tradePartners[p.country] = p.value;
+          }
+        });
+
+        updateList(partnerListEl, data);
+
+        // 🔥 FORCE GLOBE RECOLOR
+        if (state.world) {
+          state.world.polygonCapColor(state.world.polygonCapColor());
+        }
+      })
+      .catch(err => {
+        if (err.name === "AbortError") return;
+        showError(partnerListEl);
+      });
+  }
+}
+
+// button events
+exportsBtn.onclick = () => setMode("exports");
+importsBtn.onclick = () => setMode("imports");
+
+
 // ===== LOAD GLOBE =====
 fetch(GEOJSON_URL)
   .then(res => res.json())
@@ -46,7 +109,6 @@ fetch(GEOJSON_URL)
       // ===== COUNTRY CLICK =====
       async onCountryClick(polygon, world) {
 
-        // API offline guard
         if (!state.apiOnline) {
           countryNameEl.textContent = "API Offline";
           showError(partnerListEl, "Start server to load data");
@@ -55,14 +117,11 @@ fetch(GEOJSON_URL)
 
         const iso = polygon.properties.ISO_A3;
 
-        // update state
         state.lastClicked = polygon;
 
-        // UI update
         countryNameEl.textContent = polygon.properties.ADMIN;
         showLoading(partnerListEl);
 
-        // cancel previous request
         if (state.currentRequest) {
           state.currentRequest.abort();
         }
@@ -71,9 +130,12 @@ fetch(GEOJSON_URL)
         state.currentRequest = controller;
 
         try {
-          const data = await fetchTradePartners(iso, controller.signal);
+          const data = await fetchTradePartners(
+            iso,
+            state.tradeMode, // 👈 USE MODE
+            controller.signal
+          );
 
-          // rebuild trade partner map
           state.tradePartners = {};
 
           data.forEach(p => {
@@ -82,10 +144,9 @@ fetch(GEOJSON_URL)
             }
           });
 
-          // update UI
           updateList(partnerListEl, data);
 
-          // refresh globe colors
+          // 🔥 recolor globe
           world.polygonCapColor(world.polygonCapColor());
 
         } catch (err) {
@@ -100,7 +161,7 @@ fetch(GEOJSON_URL)
         }
       },
 
-      // ===== RESET (CLICK EMPTY GLOBE) =====
+      // ===== RESET =====
       onReset(world) {
         state.tradePartners = {};
         state.lastClicked = null;
@@ -112,6 +173,9 @@ fetch(GEOJSON_URL)
         world.pointOfView({ altitude: 2.5 }, 1000);
       }
     });
+
+    // 👇 SAVE WORLD GLOBALLY
+    state.world = world;
 
   })
   .catch(err => {
