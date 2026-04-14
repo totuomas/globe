@@ -45,6 +45,7 @@ infoPanel.prepend(statusContainer);
 // ===== STATE =====
 let apiOnline = false;
 let currentRequest = null;
+const prefetchCache = new Set(); // 🚀 Prevent spamming the prefetch
 
 const countryNameEl = document.getElementById("country-name");
 const partnerListEl = document.getElementById("partner-list");
@@ -128,7 +129,8 @@ fetch(GEOJSON_URL)
     let tradePartners = {};
 
     const world = Globe()(document.getElementById('globe-container'))
-      .showAtmosphere(false)
+      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+      .showAtmosphere(true)
       .polygonsData(features)
       .polygonAltitude(0.01)
 
@@ -158,10 +160,21 @@ fetch(GEOJSON_URL)
 
       .onPolygonHover(hoverD => {
         world.polygonAltitude(d =>
-          d === hoverD ? 0.05 :
-          d === lastClicked ? 0.08 :
+          d === hoverD ? 0.03 :
+          d === lastClicked ? 0.05 :
           0.01
         );
+
+        // 🔥 PRE-FETCH STRATEGY
+        if (hoverD && apiOnline) {
+          const iso = hoverD.properties.ISO_A3;
+          
+          if (!prefetchCache.has(iso)) {
+              prefetchCache.add(iso);
+              // Fire and forget. By the time they click, the backend has already cached it.
+              fetch(`https://backend-mqlt.onrender.com/trade-partners?country=${iso}`).catch(() => {});
+          }
+        }
       })
 
       // 🚀 CLICK HANDLER
@@ -200,7 +213,7 @@ fetch(GEOJSON_URL)
         const controller = new AbortController();
         currentRequest = controller;
 
-        fetch(`https://backend-mqlt.onrender.com/trade-partners?country=${iso}`, {
+        fetch(`http://localhost:3000/trade-partners?country=${iso}`, {
           signal: controller.signal
         })
           .then(res => {
@@ -218,7 +231,7 @@ fetch(GEOJSON_URL)
 
             updateList(data);
 
-            // ⚡ trigger color refresh only
+            // ⚡ trigger color refresh
             world.polygonCapColor(world.polygonCapColor());
           })
           .catch(err => {
